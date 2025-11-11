@@ -52,6 +52,19 @@ async function run() {
       );
       res.send(result);
     });
+
+    // DELETE habit by ID
+app.delete("/habits/:id", async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const result = await habitCollection.deleteOne({ _id: new ObjectId(id) });
+    res.send({ success: true, message: "Habit deleted successfully", result });
+  } catch (err) {
+    res.status(500).send({ success: false, message: "Failed to delete habit", error: err });
+  }
+});
+
         // Featured Habits Section route
     app.get("/habits/featured", async (req, res) => {
   const cursor = habitCollection.find({ public: true }).sort({ createdAt: -1 }).limit(6);
