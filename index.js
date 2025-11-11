@@ -41,6 +41,24 @@ async function run() {
       const result = await habitCollection.find().toArray();
       res.send(result);
     });
+    
+app.get("/habits", (req, res) => {
+  const userEmail = req.query.userEmail; 
+
+  
+  if (!userEmail) return res.send([]);
+
+  habitCollection
+    .find({ userEmail })  
+    .toArray((err, result) => {
+      if (err) {
+        res.status(500).send({ success: false, message: "Failed to fetch habits", error: err });
+      } else {
+        res.send(result);
+      }
+    });
+});
+
 
     // PATCH habit (update streak)
     app.patch("/habits/:id", async (req, res) => {
