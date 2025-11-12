@@ -29,66 +29,80 @@ async function run() {
     const db = client.db("habitTrackersDB");
     const habitCollection = db.collection("habits");
 
-    // POST new habit
+   // POST new habit
     app.post("/habits", async (req, res) => {
       const newHabit = req.body;
       const result = await habitCollection.insertOne(newHabit);
-      res.send(result);
+      res.send({ success: true, message: "Habit added", result });
     });
-
     // GET all habits
-    app.get("/habits", async (req, res) => {
-      const result = await habitCollection.find().toArray();
-      res.send(result);
-    });
-    
-app.get("/habits", (req, res) => {
-  const userEmail = req.query.userEmail; 
+app.get("/habits", async (req, res) => {
+  const { userEmail, featured } = req.query;
+  const filter = {};
 
-  
-  if (!userEmail) return res.send([]);
+  if (userEmail) filter.userEmail = userEmail;      
+  if (featured === "true") filter.public = true; 
 
-  habitCollection
-    .find({ userEmail })  
-    .toArray((err, result) => {
-      if (err) {
-        res.status(500).send({ success: false, message: "Failed to fetch habits", error: err });
-      } else {
-        res.send(result);
-      }
-    });
+  const habits = await habitCollection
+    .find(filter)
+    .sort({ createdAt: -1 })
+    .limit(featured === "true" ? 6 : 0) 
+    .toArray();
+
+  res.send(habits);
 });
-
-
-    // PATCH habit (update streak)
-    app.patch("/habits/:id", async (req, res) => {
-      const id = req.params.id;
-      const updatedData = req.body;
-      const result = await habitCollection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: updatedData }
-      );
-      res.send(result);
-    });
-
-    // DELETE habit by ID
-app.delete("/habits/:id", async (req, res) => {
-  const id = req.params.id;
-
+// Public habits fetch
+app.get("/habits/public", async (req, res) => {
   try {
-    const result = await habitCollection.deleteOne({ _id: new ObjectId(id) });
-    res.send({ success: true, message: "Habit deleted successfully", result });
-  } catch (err) {
-    res.status(500).send({ success: false, message: "Failed to delete habit", error: err });
+    const habits = await habitCollection.find({ public: true }).toArray();
+    res.status(200).json(habits);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch public habits" });
   }
 });
 
-        // Featured Habits Section route
-    app.get("/habits/featured", async (req, res) => {
-  const cursor = habitCollection.find({ public: true }).sort({ createdAt: -1 }).limit(6);
-  const result = await cursor.toArray();
-  res.send(result);
+  // GET single habit by ID
+    app.get("/habits/:id", async (req, res) => {
+  const { id } = req.params;
+
+  
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ success: false, message: "Invalid habit ID" });
+  }
+
+  const habit = await habitCollection.findOne({ _id: new ObjectId(id) });
+
+  if (!habit) {
+    return res.status(404).send({ success: false, message: "Habit not found" });
+  }
+
+  res.send(habit);
 });
+
+    
+    // PATCH / update habit
+    app.patch("/habits/:id", async (req, res) => {
+      const { id } = req.params;
+      if (!ObjectId.isValid(id)) return res.status(400).send({ success: false, message: "Invalid habit ID" });
+
+      const updatedData = req.body;
+      const result = await habitCollection.updateOne({ _id: new ObjectId(id) }, { $set: updatedData });
+      res.send({ success: true, message: "Habit updated", result });
+    });
+   
+
+
+  // DELETE habit by ID
+    app.delete("/habits/:id", async (req, res) => {
+      const { id } = req.params;
+      if (!ObjectId.isValid(id)) return res.status(400).send({ success: false, message: "Invalid habit ID" });
+
+      const result = await habitCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send({ success: true, message: "Habit deleted", result });
+    });
+
+   
+       console.log("All routes are set!");
 
   } catch (err) {
     console.error(err);
@@ -104,4 +118,5 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(` Server running on port ${port}`);
 });
+
 
