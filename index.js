@@ -92,6 +92,7 @@ app.get("/habits/public", async (req, res) => {
    
 
 
+
   // DELETE habit by ID
     app.delete("/habits/:id", async (req, res) => {
       const { id } = req.params;
@@ -100,6 +101,43 @@ app.get("/habits/public", async (req, res) => {
       const result = await habitCollection.deleteOne({ _id: new ObjectId(id) });
       res.send({ success: true, message: "Habit deleted", result });
     });
+
+    //  Mark habit as complete (Add today's date to completionHistory)
+app.patch("/habits/:id/complete", async (req, res) => {
+  const { id } = req.params;
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ success: false, message: "Invalid habit ID" });
+  }
+
+  try {
+    const habit = await habitCollection.findOne({ _id: new ObjectId(id) });
+    if (!habit) {
+      return res.status(404).send({ success: false, message: "Habit not found" });
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    const completionHistory = habit.completionHistory || [];
+
+    if (completionHistory.includes(today)) {
+      return res.send({ success: false, message: "Already marked complete for today" });
+    }
+
+    await habitCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $push: { completionHistory: today } }
+    );
+
+    const updatedHabit = await habitCollection.findOne({ _id: new ObjectId(id) });
+    res.send({ success: true, message: "Marked complete", updatedHabit });
+  } catch (error) {
+    console.error("Error marking complete:", error);
+    res.status(500).send({ success: false, message: "Server error", error: error.message });
+  }
+});
+
+
+
 
    
        console.log("All routes are set!");
