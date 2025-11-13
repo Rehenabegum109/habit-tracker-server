@@ -45,18 +45,16 @@ async function run() {
     const db = client.db("habitTrackersDB");
     const habitCollection = db.collection("habits");
 
-    // -------------------
-    // CREATE new habit
-    // -------------------
+    
     app.post("/habits", async (req, res) => {
       const newHabit = { ...req.body, completionHistory: [] };
       const result = await habitCollection.insertOne(newHabit);
       res.send({ success: true, message: "Habit added", result });
     });
 
-    // -------------------
+    
     // GET all habits
-    // -------------------
+    
     app.get("/habits", async (req, res) => {
       const { userEmail, featured } = req.query;
       const filter = {};
@@ -70,7 +68,7 @@ async function run() {
         .limit(featured === "true" ? 6 : 0)
         .toArray();
 
-      // Add currentStreak to each habit
+      
       const habitsWithStreak = habits.map(habit => ({
         ...habit,
         currentStreak: calculateStreak(habit.completionHistory)
@@ -79,9 +77,7 @@ async function run() {
       res.send(habitsWithStreak);
     });
 
-    // -------------------
-    // GET public habits
-    // -------------------
+    
     app.get("/habits/public", async (req, res) => {
       try {
         const habits = await habitCollection.find({ public: true }).toArray();
@@ -95,9 +91,7 @@ async function run() {
       }
     });
 
-    // -------------------
-    // GET single habit by ID
-    // -------------------
+    
     app.get("/habits/:id", async (req, res) => {
       const { id } = req.params;
       if (!ObjectId.isValid(id)) return res.status(400).send({ success: false, message: "Invalid habit ID" });
@@ -109,9 +103,7 @@ async function run() {
       res.send(habit);
     });
 
-    // -------------------
-    // UPDATE habit
-    // -------------------
+    
     app.patch("/habits/:id", async (req, res) => {
       const { id } = req.params;
       if (!ObjectId.isValid(id)) return res.status(400).send({ success: false, message: "Invalid habit ID" });
